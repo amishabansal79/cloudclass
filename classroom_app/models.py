@@ -142,7 +142,7 @@ class Attendance(models.Model):
     present = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ("student", "timetable", "joined_at")
+        unique_together = ("student", "timetable")
 
     def __str__(self):
         return f"{self.student.username} - {self.timetable}"

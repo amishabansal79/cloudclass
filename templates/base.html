@@ -53,9 +53,12 @@
             {% endif %}
 
             <li class="nav-item">
-                <a class="btn btn-accent btn-sm" href="{% url 'logout' %}">
-                    Logout
-                </a>
+                <form method="post" action="{% url 'logout' %}" class="m-0">
+                    {% csrf_token %}
+                    <button class="btn btn-accent btn-sm" type="submit">
+                        Logout
+                    </button>
+                </form>
             </li>
 
             {% else %}

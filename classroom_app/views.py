@@ -6,6 +6,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import datetime
 from .models import User, UserProfile, Subject, ClassRoom, Timetable, Attendance
@@ -55,6 +56,8 @@ def login_view(request):
     return render(request, "auth/login.html", {"form": form})
 
 
+@login_required
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect("login")
@@ -286,16 +289,28 @@ def join_class(request, pk):
     timetable = get_object_or_404(Timetable, pk=pk)
     now = timezone.localtime().time()
 
-    if request.user.role == "student":
-        if now < timetable.start_time:
-            return JsonResponse(
-                {"status": "error", "message": "Class has not started yet."}
-            )
-
-        Attendance.objects.get_or_create(
-            student=request.user,
-            timetable=timetable,
+    if request.user.role != "student":
+        return JsonResponse(
+            {"status": "error", "message": "Only students can join classes."},
+            status=403,
         )
+
+    profile = getattr(request.user, "userprofile", None)
+    if not profile or profile.classroom_id != timetable.classroom_id:
+        return JsonResponse(
+            {"status": "error", "message": "This class is not assigned to your classroom."},
+            status=403,
+        )
+
+    if now < timetable.start_time:
+        return JsonResponse(
+            {"status": "error", "message": "Class has not started yet."}
+        )
+
+    Attendance.objects.get_or_create(
+        student=request.user,
+        timetable=timetable,
+    )
 
     return JsonResponse(
         {"status": "ok", "meeting_link": timetable.meeting_link}
@@ -308,7 +323,7 @@ def join_class(request, pk):
 @login_required
 @teacher_required
 def attendance_report(request, timetable_id):
-    t = get_object_or_404(Timetable, pk=timetable_id)
+    t = get_object_or_404(Timetable, pk=timetable_id, teacher=request.user)
     records = Attendance.objects.filter(
         timetable=t
     ).order_by("-joined_at")

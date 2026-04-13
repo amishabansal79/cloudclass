@@ -25,7 +25,7 @@
 
                 <tbody id="tt-body">
                     {% for t in today_timetables %}
-                    <tr data-start="{{ t.start_time }}" data-end="{{ t.end_time }}" data-pk="{{ t.id }}">
+                    <tr data-start="{{ t.start_time|time:'H:i' }}" data-end="{{ t.end_time|time:'H:i' }}" data-pk="{{ t.id }}">
                         <td>{{ t.start_time }} – {{ t.end_time }}</td>
                         <td>{{ t.subject }}</td>
                         <td>{{ t.teacher.username }}</td>
@@ -161,7 +161,7 @@
         setInterval(updateBadges, 30000);
 
         {% if next_class %}
-        startCountdown("{{ next_class.start_time }}");
+        startCountdown("{{ next_class.start_time|time:'H:i' }}");
         {% endif %}
 
         // Join class

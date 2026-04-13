@@ -25,7 +25,7 @@
             </div>
 
             <span class="text-muted small">
-                {{ s.teacher.username if s.teacher else '' }}
+                {% if s.teacher %}{{ s.teacher.username }}{% endif %}
             </span>
 
         </li>

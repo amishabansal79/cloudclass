@@ -14,6 +14,13 @@ class SignupForm(UserCreationForm):
         model = User
         fields = ("username", "email", "role", "password1", "password2")
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.role = "student"
+        if commit:
+            user.save()
+        return user
+
 class SubjectForm(forms.ModelForm):
     class Meta:
         model = Subject
