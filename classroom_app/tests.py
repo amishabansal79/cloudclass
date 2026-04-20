@@ -3,6 +3,7 @@ from datetime import time
 from django.template.loader import get_template
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .forms import SignupForm
 from .models import Attendance, ClassRoom, Subject, Timetable, User
@@ -30,23 +31,34 @@ class SecurityRegressionTests(TestCase):
         self.student.userprofile.classroom = self.room
         self.student.userprofile.save()
         self.subject = Subject.objects.create(name="Math", teacher=self.teacher)
+        self.current_day = timezone.localtime().strftime("%a").upper()[:3]
         self.timetable = Timetable.objects.create(
             subject=self.subject,
             classroom=self.room,
             teacher=self.teacher,
-            day="MON",
+            day=self.current_day,
             start_time=time(0, 0),
-            end_time=time(23, 59),
+            end_time=time(23, 59, 59),
             meeting_link="https://example.com/class",
         )
         self.other_timetable = Timetable.objects.create(
             subject=self.subject,
             classroom=self.other_room,
             teacher=self.other_teacher,
-            day="TUE",
+            day=self.current_day,
             start_time=time(0, 0),
-            end_time=time(23, 59),
+            end_time=time(23, 59, 59),
             meeting_link="https://example.com/other-class",
+        )
+        inactive_day = "TUE" if self.current_day != "TUE" else "WED"
+        self.inactive_timetable = Timetable.objects.create(
+            subject=self.subject,
+            classroom=self.room,
+            teacher=self.teacher,
+            day=inactive_day,
+            start_time=time(0, 0),
+            end_time=time(23, 59, 59),
+            meeting_link="https://example.com/inactive-class",
         )
 
     def test_public_signup_cannot_create_teacher(self):
@@ -102,6 +114,15 @@ class SecurityRegressionTests(TestCase):
         self.assertEqual(first_response.status_code, 200)
         self.assertEqual(second_response.status_code, 200)
         self.assertEqual(Attendance.objects.count(), 1)
+
+    def test_student_cannot_join_class_that_is_not_live(self):
+        self.client.login(username="student", password="pass12345")
+
+        response = self.client.post(reverse("join_class", args=[self.inactive_timetable.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "https://example.com/inactive-class")
+        self.assertEqual(Attendance.objects.count(), 0)
 
     def test_subject_list_template_loads(self):
         template = get_template("classroom_app/subject_list.html")

@@ -287,7 +287,9 @@ def timetable_list_student(request):
 @login_required
 def join_class(request, pk):
     timetable = get_object_or_404(Timetable, pk=pk)
-    now = timezone.localtime().time()
+    now = timezone.localtime()
+    current_day = now.strftime("%a").upper()[:3]
+    current_time = now.time()
 
     if request.user.role != "student":
         return JsonResponse(
@@ -302,9 +304,13 @@ def join_class(request, pk):
             status=403,
         )
 
-    if now < timetable.start_time:
+    if (
+        timetable.day != current_day
+        or current_time < timetable.start_time
+        or current_time > timetable.end_time
+    ):
         return JsonResponse(
-            {"status": "error", "message": "Class has not started yet."}
+            {"status": "error", "message": "Class is not live right now."}
         )
 
     Attendance.objects.get_or_create(
